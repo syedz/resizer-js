@@ -111,7 +111,6 @@ var detectFileType = function(filename){
                         .resize(parseInt(width),parseInt(height))
                         .max()
                         .withoutEnlargement()
-                        .jpeg()
                         .toFile('optimized/' + filenameNoExt + '.jpg', function(err) {
                             if (err)
                                 self.log(err);
