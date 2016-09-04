@@ -24,7 +24,7 @@ vorpal
         if (fs.statSync(path).isDirectory()) {
             this.prompt({
                 type:    'confirm',
-                name:    'contine',
+                name:    'continue',
                 default: false,
                 message: 'Resize all images in the folder? ',
             }, function(result){
@@ -117,7 +117,7 @@ var detectFileType = function(filename){
                                 self.log(err);
                             else
                                 self.log('Resize of ' + filename + ' complete');
-                    });
+                        });
                 }
             else
                 self.log(err);
