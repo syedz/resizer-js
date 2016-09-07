@@ -21,7 +21,7 @@ vorpal
         if (args.height)
             height = args.height;
 
-        if (fs.statSync(path).isDirectory()) {
+        if (fs.lstatSync(path).isDirectory()) {
             this.prompt({
                 type:    'confirm',
                 name:    'continue',
@@ -32,7 +32,7 @@ vorpal
                     files = fs.readdirSync(path);
                     // Skip the prompts if a width was supplied
                     if (width)
-                        doResize(self);
+                        Image.doResize(self);
                     else
                         getWidth(self);
                 }
@@ -42,14 +42,14 @@ vorpal
             });
         }
         // Resize a single image
-        else if (fs.statSync(path).isFile()) {
+        else if (fs.lstatSync(path).isFile()) {
             // Get the file name without the path
             files = [path.split("/").pop()];
             // Get the path without the file name
             path = path.substr(0, path.lastIndexOf('/'));
             // Skip the questions if a width was supplised
             if (width)
-                doResize(self);
+                Image.doResize(self);
             else
                 getWidth(self);
         }
@@ -83,42 +83,50 @@ var getHeight = function(v){
     }, function(result){
         if (result.height)
             height = result.height
-        doResize(self);
+        Image.doResize(self);
     });
 };
 
-var doResize = function(v){
-    self = v;
-    // Create a folder to dump the resized images
-    if (!fs.existsSync('optimized'))
-        fs.mkdirSync('optimized');
+var Image = (function(){
 
-    for (var i in files)
-        detectFileType(files[i]);
-};
+    var doResize = function(v){
+        self = v;
+        // Create a folder to dump the resized images
+        if (!fs.existsSync('optimized'))
+            fs.mkdirSync('optimized');
 
-var detectFileType = function(filename){
-    var fullPath      = path + "/" + filename,
-        filenameNoExt = filename.substr(0, filename.lastIndexOf('.')),
-        magic         = new Magic(mmm.MAGIC_MIME_TYPE);
+        for (var i in files)
+            detectFileType(files[i]);
+    };
 
-        // Make sure this is an appropriate image file type
-        magic.detectFile(fullPath, function(err, result) {
-            if (!err) {
-                if (result.split('/')[0] == 'image')
-                    // Resize to a jpeg without enlarging it beyond the specified width/height
-                    sharp(fullPath)
-                        .resize(parseInt(width),parseInt(height))
-                        .max()
-                        .withoutEnlargement()
-                        .toFile('optimized/' + filenameNoExt + '.jpg', function(err) {
-                            if (err)
-                                self.log(err);
-                            else
-                                self.log('Resize of ' + filename + ' complete');
-                        });
-                }
-            else
-                self.log(err);
-        });
-};
+    var detectFileType = function(filename){
+        var fullPath      = path + "/" + filename,
+            filenameNoExt = filename.substr(0, filename.lastIndexOf('.')),
+            magic         = new Magic(mmm.MAGIC_MIME_TYPE);
+
+            // Make sure this is an appropriate image file type
+            magic.detectFile(fullPath, function(err, result) {
+                if (!err) {
+                    if (result.split('/')[0] == 'image')
+                        // Resize to a jpeg without enlarging it beyond the specified width/height
+                        sharp(fullPath)
+                            .resize(parseInt(width),parseInt(height))
+                            .max()
+                            .withoutEnlargement()
+                            .toFile('optimized/' + filenameNoExt + '.jpg', function(err) {
+                                if (err)
+                                    self.log(err);
+                                else
+                                    self.log('Resize of ' + filename + ' complete');
+                            });
+                    }
+                else
+                    self.log(err);
+            });
+    };
+
+    return {
+        doResize: doResize
+    };
+
+})();
