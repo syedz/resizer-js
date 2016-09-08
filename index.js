@@ -104,16 +104,16 @@ var detectFileType = function(filename){
         // Make sure this is an appropriate image file type
         magic.detectFile(fullPath, function(err, result) {
             if (!err) {
-                if (result.split('/')[0] == 'image')
+                if (result.split('/')[0] == 'image') {
                     // Resize to a JPEG without enlarging it beyond the specified width/height
-                    // Image.filename = filename;
-                    // Image.fullPath = fullPath;
-                    // self.log("Set Image.filename " + Image.filename);
-                    // self.log("Set Image.fullPath " + Image.fullPath);
-                    Image.performResize(filename, fullPath);
+                    Image.filename = filename;
+                    Image.fullPath = fullPath;
+                    Image.performResize();
                 }
-            else
+            }
+            else {
                 self.log(err);
+            }
         });
 };
 
@@ -121,7 +121,7 @@ var Image = (function(){
     var fullPath,
         filename;
 
-    var performResize = function(filename, fullPath) {
+    var performResize = function() {
         var filenameNoExt = filename.substr(0, filename.lastIndexOf('.'));
 
         sharp(fullPath)
