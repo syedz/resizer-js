@@ -1,20 +1,25 @@
 #! /usr/bin/env node
 
+"use strict";
+
 var vorpal = require('vorpal')();
 var fs     = require('fs');
 var sharp  = require('sharp');
 var mmm    = require('mmmagic');
 
-var Magic  = mmm.Magic,
-    path   = null,
-    width  = null,
-    height = null;
+var Magic       = mmm.Magic,
+    magic       = new Magic(mmm.MAGIC_MIME_TYPE),
+    path        = null,
+    width       = null,
+    height      = null,
+    commandSelf = null,
+    files       = null;
 
 vorpal
     .command('resize <path> [width] [height]', 'Resize an image or all images in a folder')
     .action(function(args, cb){
-        const self = this;
-        path       = args.path
+        commandSelf = this;
+        path        = args.path
 
         if (args.width)
             width = args.width;
@@ -32,9 +37,9 @@ vorpal
                     files = fs.readdirSync(path);
                     // Skip the prompts if a width was supplied
                     if (width)
-                        doResize(self);
+                        doResize(commandSelf);
                     else
-                        getWidth(self);
+                        getWidth(commandSelf);
                 }
                 else {
                     cb();
@@ -49,9 +54,9 @@ vorpal
             path = path.substr(0, path.lastIndexOf('/'));
             // Skip the questions if a width was supplised
             if (width)
-                doResize(self);
+                doResize(commandSelf);
             else
-                getWidth(self);
+                getWidth(commandSelf);
         }
     });
 
@@ -60,8 +65,8 @@ vorpal
     .show();
 
 var getWidth = function(v){
-    self = v;
-    self.prompt({
+    commandSelf = v;
+    commandSelf.prompt({
         type:    'input',
         name:    'width',
         default: false,
@@ -69,13 +74,13 @@ var getWidth = function(v){
     }, function(result){
         if (result.width)
             width = result.width;
-        getHeight(self);
+        getHeight(commandSelf);
     });
 };
 
 var getHeight = function(v){
-    self = v;
-    self.prompt({
+    commandSelf = v;
+    commandSelf.prompt({
         type:    'input',
         name:    'height',
         default: false,
@@ -83,58 +88,58 @@ var getHeight = function(v){
     }, function(result){
         if (result.height)
             height = result.height
-        doResize(self);
+        doResize(commandSelf);
     });
 };
 
 var doResize = function(v){
-    self = v;
+    commandSelf = v;
     // Create a folder to dump the resized images
     if (!fs.existsSync('optimized'))
         fs.mkdirSync('optimized');
 
-    for (var i in files)
+    for (var i in files){
         detectFileType(files[i]);
+    }
 };
 
-var detectFileType = function(filename){
-    var fullPath      = path + "/" + filename,
-        magic         = new Magic(mmm.MAGIC_MIME_TYPE);
+ var detectFileType = function(filename){
+    var fullPath = path + "/" + filename;
 
-        // Make sure this is an appropriate image file type
-        magic.detectFile(fullPath, function(err, result) {
-            if (!err) {
-                if (result.split('/')[0] == 'image'){
-                    // Resize to a JPEG without enlarging it beyond the specified width/height
-                    var imageObj = new Image(filename, fullPath);
-                    imageObj.performResize();
-                }
-                else {
-                    self.log("Regarding " + fullPath + ": not an image");
-                }
+    // Make sure this is an appropriate image file type
+    magic.detectFile(fullPath, function(err, result){
+        if (!err) {
+            if (result.split('/')[0] == 'image') {
+                // Resize to a JPEG without enlarging it beyond the specified width/height
+                var imageObj = new Image(filename, fullPath);
+                imageObj.performResize();
             }
-            else {
-                self.log(err);
-            }
-        });
-};
+            commandSelf.log("Regarding " + fullPath + ": " + result.split('/')[0]);
+            this.fileType = result.split('/')[0];
+        }
+        else {
+            commandSelf.log(err);
+        }
+    });
+}
 
 var Image = function(filename, fullPath){
     this.filename = filename;
     this.fullPath = fullPath;
+    var self = this;
 
     this.performResize = function() {
-        var filenameNoExt = filename.substr(0, filename.lastIndexOf('.'));
+        var filenameNoExt = this.filename.substr(0, this.filename.lastIndexOf('.'));
 
-        sharp(fullPath)
+        sharp(this.fullPath)
             .resize(parseInt(width),parseInt(height))
             .max()
             .withoutEnlargement()
             .toFile('optimized/' + filenameNoExt + '.jpg', function(err) {
                 if (err)
-                    self.log(err);
+                    commandSelf.log(err);
                 else
-                    self.log('Resize of ' + filename + ' complete');
+                    commandSelf.log('Resize of ' + self.filename + ' complete');
             });
     }
 };
